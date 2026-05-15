@@ -75,10 +75,10 @@ Aplikasi web Islamic yang komprehensif dengan berbagai fitur untuk membantu kehi
 
 ```bash
 # Clone repository
-git clone https://github.com/Muhammadkafaby/dev-islamic.git
+git clone https://github.com/rayyanbabab/islamic.git
 
 # Masuk ke direktori project
-cd dev-islamic
+cd islamic
 
 # Install dependencies
 npm install
@@ -166,17 +166,11 @@ Kontribusi selalu diterima! Jika Anda ingin berkontribusi:
 
 Project ini dilisensikan di bawah [MIT License](LICENSE).
 
-## 🤝 Dukungan
-
-Jika Anda mengalami masalah atau memiliki saran, silakan:
-
-- Buat [issue](https://github.com/Muhammadkafaby/dev-islamic/issues) di GitHub
-- Hubungi developer melalui email
-
 ## 📞 Kontak
 
 - **Website**: [islamic-dev.netlify.app](https://islamic-dev.netlify.app)
-- **GitHub**: [github.com/Muhammadkafaby/dev-islamic](https://github.com/Muhammadkafaby/dev-islamic)
+- **GitHub**: [github.com/rayyanbabab](https://github.com/rayyanbabab)
+)
 
 ---
 
