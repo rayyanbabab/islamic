@@ -1,200 +1,293 @@
-import React, { useState } from 'react';
-import { Compass, MapPin, ExternalLink, Loader2 } from 'lucide-react';
-import { getQiblaDirection } from '../services/islamicApi';
+import React, { useState, useEffect } from 'react';
+import { Compass, Navigation, ExternalLink, Info, Search } from 'lucide-react';
+import { getQiblaDirection, INDONESIAN_CITIES } from '../services/islamicApi';
 
-const QiblaFinder: React.FC = () => {
-  const [location, setLocation] = useState('');
-  const [qiblaUrl, setQiblaUrl] = useState('');
-  const [qiblaDirection, setQiblaDirection] = useState<number | null>(null);
+interface QiblaFinderProps {
+  onNotify?: (msg: string) => void;
+}
+
+const QiblaFinder: React.FC<QiblaFinderProps> = ({ onNotify }) => {
+  const [cityName, setCityName] = useState(() => {
+    return localStorage.getItem('user_city') || 'Jakarta';
+  });
+  const [searchInput, setSearchInput] = useState('');
+  const [bearing, setBearing] = useState<number>(295);
+  const [distanceKm, setDistanceKm] = useState<number>(7925);
+  const [mapUrl, setMapUrl] = useState<string>('');
+  const [deviceHeading, setDeviceHeading] = useState<number | null>(null);
+  const [isSensorActive, setIsSensorActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleFindQibla = async () => {
-    if (!location.trim()) return;
-    
-    setLoading(true);
-    setError('');
-    
-    try {
-      // Use OpenCage Geocoding API
-      const response = await fetch(
-        `https://api.opencagedata.com/geocode/v1/json?q=${encodeURIComponent(location)}&key=abe50584aa984d488cc527da6f8def78&limit=1`
-      );
-      const data = await response.json();
-      
-      if (data.results && data.results.length > 0) {
-        const { lat, lng } = data.results[0].geometry;
-        const result = getQiblaDirection(lat, lng);
-        setQiblaUrl(result.url);
-        setQiblaDirection(result.bearing);
-      } else {
-        // Fallback to predefined coordinates for major Indonesian cities
-        const cityCoordinates: Record<string, [number, number]> = {
-          'jakarta': [-6.2088, 106.8456],
-          'bandung': [-6.9175, 107.6191],
-          'surabaya': [-7.2575, 112.7521],
-          'medan': [3.5952, 98.6722],
-          'yogyakarta': [-7.7956, 110.3695],
-          'semarang': [-6.9932, 110.4203],
-          'makassar': [-5.1477, 119.4327],
-          'palembang': [-2.9761, 104.7754],
-          'solo': [-7.5666, 110.8167],
-          'malang': [-7.9666, 112.6326],
-          'denpasar': [-8.6500, 115.2167],
-          'balikpapan': [-1.2379, 116.8529],
-          'pontianak': [-0.0263, 109.3425],
-          'manado': [1.4748, 124.8421],
-          'pekanbaru': [0.5071, 101.4478]
-        };
-        
-        const cityKey = location.toLowerCase();
-        const coordinates = cityCoordinates[cityKey];
-        
-        if (coordinates) {
-          const [lat, lng] = coordinates;
-          const result = getQiblaDirection(lat, lng);
-          setQiblaUrl(result.url);
-          setQiblaDirection(result.bearing);
-        } else {
-          setError('Lokasi tidak ditemukan. Coba nama kota yang lebih spesifik atau gunakan lokasi Anda.');
-        }
-      }
-    } catch (err) {
-      setError('Gagal mencari arah kiblat. Silakan coba lagi.');
-    } finally {
-      setLoading(false);
+  // Calculate qibla for initial or selected city
+  useEffect(() => {
+    calculateQiblaForCity(cityName);
+  }, [cityName]);
+
+  const calculateQiblaForCity = (name: string) => {
+    const key = name.toLowerCase().trim();
+    const cityInfo = INDONESIAN_CITIES[key] || INDONESIAN_CITIES['jakarta'];
+    const result = getQiblaDirection(cityInfo.lat, cityInfo.lng);
+    setBearing(result.bearing);
+    setDistanceKm(result.distanceKm);
+    setMapUrl(result.url);
+  };
+
+  const handleSearch = () => {
+    if (!searchInput.trim()) return;
+    const key = searchInput.toLowerCase().trim();
+    if (INDONESIAN_CITIES[key]) {
+      setCityName(INDONESIAN_CITIES[key].name);
+      setSearchInput('');
+      setError('');
+    } else {
+      setCityName(searchInput.trim());
+      calculateQiblaForCity(searchInput.trim());
+      setSearchInput('');
     }
   };
 
   const handleGetCurrentLocation = () => {
-    if (navigator.geolocation) {
-      setLoading(true);
-      setError('');
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          const result = getQiblaDirection(latitude, longitude);
-          setQiblaUrl(result.url);
-          setQiblaDirection(result.bearing);
-          setLocation('Lokasi Anda');
-          setLoading(false);
-        },
-        (error) => {
-          setError('Gagal mendapatkan lokasi Anda. Pastikan Anda mengizinkan akses lokasi.');
-          setLoading(false);
-        },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-          maximumAge: 300000
-        }
-      );
+    if (!navigator.geolocation) {
+      setError('Geolocation tidak didukung browser ini.');
+      return;
+    }
+    setLoading(true);
+    setError('');
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        const result = getQiblaDirection(latitude, longitude);
+        setBearing(result.bearing);
+        setDistanceKm(result.distanceKm);
+        setMapUrl(result.url);
+        setCityName('Lokasi Anda (GPS)');
+        setLoading(false);
+        if (onNotify) onNotify('Arah kiblat disesuaikan dengan GPS');
+      },
+      () => {
+        setError('Gagal mengakses GPS. Pastikan izin lokasi aktif.');
+        setLoading(false);
+      }
+    );
+  };
+
+  // Device orientation / compass sensor
+  const toggleDeviceCompass = () => {
+    const DeviceOrientation = window.DeviceOrientationEvent as unknown as {
+      requestPermission?: () => Promise<string>;
+    };
+
+    if (typeof DeviceOrientation?.requestPermission === 'function') {
+      // iOS 13+ permission
+      DeviceOrientation.requestPermission()
+        .then((response: string) => {
+          if (response === 'granted') {
+            startCompassListener();
+          } else {
+            setError('Izin sensor kompas ditolak');
+          }
+        })
+        .catch(() => setError('Gagal mengaktifkan sensor kompas'));
     } else {
-      setError('Geolocation tidak didukung oleh browser Anda.');
+      // Android or standard browsers
+      startCompassListener();
     }
   };
 
-  const getDirectionText = (bearing: number) => {
-    const directions = [
-      'Utara', 'Timur Laut', 'Timur', 'Tenggara',
-      'Selatan', 'Barat Daya', 'Barat', 'Barat Laut'
-    ];
-    const index = Math.round(bearing / 45) % 8;
-    return directions[index];
+  const startCompassListener = () => {
+    const handleOrientation = (e: DeviceOrientationEvent) => {
+      let heading = null;
+      const webkitHeading = (e as unknown as { webkitCompassHeading?: number }).webkitCompassHeading;
+      if (webkitHeading !== undefined) {
+        // iOS
+        heading = webkitHeading;
+      } else if (e.alpha !== null) {
+        // Android
+        heading = 360 - e.alpha;
+      }
+
+      if (heading !== null) {
+        setDeviceHeading(heading);
+        setIsSensorActive(true);
+      }
+    };
+
+    window.addEventListener('deviceorientation', handleOrientation, true);
+    setIsSensorActive(true);
+    if (onNotify) onNotify('Sensor kompas perangkat aktif');
   };
 
-  return (
-    <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 shadow-lg border border-white/20">
-      <div className="flex items-center gap-3 mb-6">
-        <Compass className="w-6 h-6 text-amber-400" />
-        <h2 className="text-xl font-bold text-white">Arah Kiblat</h2>
-      </div>
+  // Relative needle angle if device heading is active
+  const needleAngle = deviceHeading !== null ? bearing - deviceHeading : bearing;
 
-      <div className="space-y-4">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="Masukkan nama kota atau alamat..."
-              className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
-              onKeyPress={(e) => e.key === 'Enter' && handleFindQibla()}
-            />
+  const popularCities = ['Jakarta', 'Surabaya', 'Bandung', 'Medan', 'Makassar', 'Yogyakarta'];
+
+  return (
+    <div className="app-card p-6 shadow-soft max-w-xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between pb-4 border-b border-emerald-900/20 dark:border-emerald-900/30">
+        <div className="flex items-center gap-2">
+          <span className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400">
+            <Compass className="w-5 h-5" />
+          </span>
+          <div>
+            <h3 className="text-base font-bold text-slate-100">Penunjuk Arah Kiblat</h3>
+            <p className="text-xs text-slate-400">Arah presisi menuju Ka'bah di Makkah Al-Mukarramah</p>
           </div>
-          <button
-            onClick={handleFindQibla}
-            disabled={loading || !location.trim()}
-            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-gray-500 text-white rounded-lg font-medium transition-colors duration-200 flex items-center gap-2"
-          >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Cari'}
-          </button>
         </div>
 
         <button
           onClick={handleGetCurrentLocation}
           disabled={loading}
-          className="w-full py-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-500 text-white rounded-lg font-medium transition-colors duration-200 flex items-center justify-center gap-2"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 text-xs font-medium border border-emerald-700/50 transition-colors"
+          title="Deteksi Lokasi GPS"
         >
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <MapPin className="w-4 h-4" />}
-          Gunakan Lokasi Saya
+          <Navigation className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+          <span>GPS</span>
         </button>
+      </div>
 
-        {error && (
-          <div className="text-red-300 text-sm bg-red-500/20 rounded-lg p-3">
-            {error}
-          </div>
-        )}
+      {/* Search Input & Quick Chips */}
+      <div className="space-y-2">
+        <div className="relative">
+          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+          <input
+            type="text"
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            placeholder="Cari kota untuk arah kiblat..."
+            className="w-full pl-9 pr-20 py-2 bg-slate-900/60 dark:bg-[#0c1815] border border-emerald-900/40 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500"
+          />
+          <button
+            onClick={handleSearch}
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 px-3 py-1 bg-brand-600 hover:bg-brand-500 text-white text-xs rounded-lg font-medium"
+          >
+            Cari
+          </button>
+        </div>
 
-        {qiblaUrl && (
-          <div className="bg-white/5 rounded-lg p-4">
-            <div className="text-center mb-4">
-              <div className="text-green-300 mb-3">
-                <Compass className="w-12 h-12 mx-auto mb-2" />
-                <p className="text-lg font-semibold">Arah Kiblat untuk</p>
-                <p className="text-amber-300 font-bold">{location}</p>
-              </div>
-              
-              {qiblaDirection !== null && (
-                <div className="bg-white/10 rounded-lg p-3 mb-4">
-                  <div className="text-2xl font-bold text-white mb-1">
-                    {Math.round(qiblaDirection)}°
-                  </div>
-                  <div className="text-sm text-gray-300">
-                    {getDirectionText(qiblaDirection)}
-                  </div>
-                </div>
-              )}
-            </div>
-            
-            <div className="flex gap-2">
-              <a
-                href={qiblaUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors duration-200"
-              >
-                <ExternalLink className="w-4 h-4" />
-                Buka di Google Maps
-              </a>
-            </div>
-            
-            <div className="mt-4 text-xs text-gray-400 text-center">
-              💡 Tip: Gunakan kompas untuk menghadap ke arah yang ditunjukkan
-            </div>
-          </div>
-        )}
+        <div className="flex items-center justify-between pt-1">
+          <span className="text-[11px] font-semibold text-slate-400">Lokasi:</span>
+          <span className="text-xs font-bold text-brand-300 capitalize">{cityName}</span>
+        </div>
 
-        <div className="bg-white/5 rounded-lg p-4">
-          <h4 className="text-sm font-semibold text-amber-300 mb-2">Informasi:</h4>
-          <div className="text-xs text-gray-300 space-y-1">
-            <p>• Arah kiblat dihitung berdasarkan koordinat Ka'bah di Makkah</p>
-            <p>• Untuk akurasi terbaik, gunakan lokasi GPS Anda</p>
-            <p>• Aplikasi ini menggunakan OpenCage Geocoding API</p>
-          </div>
+        <div className="flex flex-wrap gap-1.5">
+          {popularCities.map((c) => (
+            <button
+              key={c}
+              onClick={() => {
+                setCityName(c);
+                setError('');
+              }}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
+                cityName.toLowerCase() === c.toLowerCase()
+                  ? 'bg-brand-500/20 border-brand-500 text-brand-300 font-semibold'
+                  : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {c}
+            </button>
+          ))}
         </div>
       </div>
+
+      {/* Visual Compass Dial */}
+      <div className="flex flex-col items-center justify-center my-6">
+        <div className="relative w-64 h-64 flex items-center justify-center">
+          {/* Compass Outer Ring */}
+          <div className="absolute inset-0 rounded-full border-2 border-emerald-800/40 bg-gradient-to-b from-slate-900/80 to-[#0b1b16] shadow-2xl flex items-center justify-center">
+            {/* Cardinal Marks */}
+            <span className="absolute top-2 text-xs font-bold text-amber-400 tracking-wider">U (0°)</span>
+            <span className="absolute right-3 text-xs font-bold text-slate-400">T (90°)</span>
+            <span className="absolute bottom-2 text-xs font-bold text-slate-400">S (180°)</span>
+            <span className="absolute left-3 text-xs font-bold text-slate-400">B (270°)</span>
+
+            {/* Subtle Degree Ticks */}
+            <div className="w-48 h-48 rounded-full border border-dashed border-emerald-900/50 flex items-center justify-center">
+              <div className="w-32 h-32 rounded-full border border-emerald-800/20" />
+            </div>
+          </div>
+
+          {/* Rotating Needle */}
+          <div
+            className="absolute inset-0 flex items-center justify-center transition-transform duration-500 ease-out pointer-events-none"
+            style={{ transform: `rotate(${needleAngle}deg)` }}
+          >
+            {/* Kaaba indicator on top */}
+            <div className="absolute top-6 flex flex-col items-center">
+              <div className="px-2 py-0.5 rounded bg-amber-500 text-slate-950 text-[10px] font-extrabold shadow-md mb-1 uppercase tracking-wider">
+                Ka'bah
+              </div>
+              <div className="w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[18px] border-b-amber-400" />
+            </div>
+
+            {/* Needle Line */}
+            <div className="w-1.5 h-44 bg-gradient-to-t from-slate-600 via-emerald-400 to-amber-400 rounded-full shadow-lg" />
+
+            {/* Bottom Tail */}
+            <div className="absolute bottom-7 w-2.5 h-2.5 rounded-full bg-slate-600" />
+          </div>
+
+          {/* Center Pivot */}
+          <div className="relative z-10 w-8 h-8 rounded-full bg-slate-900 border-2 border-amber-400 flex items-center justify-center shadow-lg">
+            <div className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+          </div>
+        </div>
+
+        {/* Readout stats */}
+        <div className="mt-4 text-center">
+          <div className="text-3xl font-extrabold text-white font-mono tracking-tight">
+            {Math.round(bearing)}° <span className="text-base font-semibold text-amber-300">Barat Laut</span>
+          </div>
+          <p className="text-xs text-slate-400 mt-1">
+            Jarak ke Ka'bah: <strong className="text-slate-200">{distanceKm.toLocaleString('id-ID')} km</strong>
+          </p>
+        </div>
+      </div>
+
+      {/* Sensor toggle button if on mobile / device */}
+      <div className="flex flex-col sm:flex-row gap-2">
+        <button
+          onClick={toggleDeviceCompass}
+          className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition-colors ${
+            isSensorActive
+              ? 'bg-brand-500/20 border-brand-500 text-brand-300'
+              : 'bg-slate-900/60 hover:bg-slate-800 text-slate-300 border-slate-800'
+          }`}
+        >
+          <Compass className="w-4 h-4 text-amber-400" />
+          <span>{isSensorActive ? 'Sensor Kompas Aktif' : 'Aktifkan Kompas HP'}</span>
+        </button>
+
+        {mapUrl && (
+          <a
+            href={mapUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 py-2.5 px-4 rounded-xl text-xs font-semibold bg-emerald-800 hover:bg-emerald-700 text-white flex items-center justify-center gap-2 transition-colors shadow-md"
+          >
+            <ExternalLink className="w-4 h-4" />
+            <span>Lihat Rute di Maps</span>
+          </a>
+        )}
+      </div>
+
+      {/* Guidance Note */}
+      <div className="p-3.5 rounded-xl bg-slate-900/40 border border-emerald-900/30 text-[11px] text-slate-400 flex items-start gap-2.5">
+        <Info className="w-4 h-4 text-amber-400/80 shrink-0 mt-0.5" />
+        <p className="leading-relaxed">
+          Posisikan perangkat Anda secara horizontal di permukaan datar, jauhkan dari benda logam atau medan magnet untuk akurasi optimal.
+        </p>
+      </div>
+
+      {error && (
+        <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
+          {error}
+        </div>
+      )}
     </div>
   );
 };
