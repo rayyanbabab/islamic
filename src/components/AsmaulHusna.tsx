@@ -8,10 +8,10 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
-  Sparkles,
   ExternalLink
 } from 'lucide-react';
 import { asmaulHusnaList, AsmaulHusnaItem } from '../data/asmaulHusna';
+import { RubElHizbIcon } from './Icons';
 
 interface AsmaulHusnaProps {
   onNotify?: (msg: string) => void;
@@ -36,17 +36,21 @@ const AsmaulHusna: React.FC<AsmaulHusnaProps> = ({ onNotify }) => {
     }
   }, []);
 
-  const toggleBookmark = (number: number) => {
-    const isSaved = bookmarks.includes(number);
-    const updated = isSaved ? bookmarks.filter((n) => n !== number) : [...bookmarks, number];
-    setBookmarks(updated);
+  const saveBookmarks = (newBookmarks: number[]) => {
+    setBookmarks(newBookmarks);
     try {
-      localStorage.setItem('asmaul_husna_bookmarks', JSON.stringify(updated));
+      localStorage.setItem('asmaul_husna_bookmarks', JSON.stringify(newBookmarks));
     } catch {
       // ignore
     }
+  };
+
+  const toggleBookmark = (number: number) => {
+    const isSaved = bookmarks.includes(number);
+    const updated = isSaved ? bookmarks.filter((n) => n !== number) : [...bookmarks, number];
+    saveBookmarks(updated);
     if (onNotify) {
-      onNotify(isSaved ? 'Dihapus dari nama tersimpan' : 'Nama Allah berhasil ditandai');
+      onNotify(isSaved ? 'Dihapus dari nama tersimpan' : 'Disimpan ke daftar favorit');
     }
   };
 
@@ -54,25 +58,29 @@ const AsmaulHusna: React.FC<AsmaulHusnaProps> = ({ onNotify }) => {
     const text = `${item.number}. ${item.latin} (${item.arabic})\nArti: ${item.translation}\nMakna: ${item.meaning}\nDalil: ${item.dalil}`;
     navigator.clipboard.writeText(text);
     setCopiedNumber(item.number);
-    if (onNotify) onNotify(`Asmaul Husna "${item.latin}" disalin`);
+    if (onNotify) onNotify(`Nama "${item.latin}" berhasil disalin`);
     setTimeout(() => setCopiedNumber(null), 2000);
   };
 
+  // Filter list
   const filteredList = asmaulHusnaList.filter((item) => {
+    // Range filter
+    let matchRange = true;
+    if (selectedRange === '1-33') matchRange = item.number >= 1 && item.number <= 33;
+    if (selectedRange === '34-66') matchRange = item.number >= 34 && item.number <= 66;
+    if (selectedRange === '67-99') matchRange = item.number >= 67 && item.number <= 99;
+    if (selectedRange === 'bookmarks') matchRange = bookmarks.includes(item.number);
+
+    // Search query
+    const q = searchQuery.toLowerCase().trim();
     const matchSearch =
-      searchQuery.trim() === '' ||
-      item.latin.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.translation.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.meaning.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      item.number.toString() === searchQuery.trim();
+      q === '' ||
+      item.latin.toLowerCase().includes(q) ||
+      item.translation.toLowerCase().includes(q) ||
+      item.meaning.toLowerCase().includes(q) ||
+      item.number.toString() === q;
 
-    if (!matchSearch) return false;
-
-    if (selectedRange === '1-33') return item.number >= 1 && item.number <= 33;
-    if (selectedRange === '34-66') return item.number >= 34 && item.number <= 66;
-    if (selectedRange === '67-99') return item.number >= 67 && item.number <= 99;
-    if (selectedRange === 'bookmarks') return bookmarks.includes(item.number);
-    return true;
+    return matchRange && matchSearch;
   });
 
   const navigateModal = (direction: 'prev' | 'next') => {
@@ -87,18 +95,18 @@ const AsmaulHusna: React.FC<AsmaulHusnaProps> = ({ onNotify }) => {
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
       {/* Top Banner Header */}
-      <div className="app-card p-6 shadow-soft bg-gradient-to-br from-[#0c1e19] via-[#091512] to-[#0c1a16] border-emerald-800/40">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-emerald-900/30">
+      <div className="app-card p-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200/80 dark:border-white/[0.08]">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400">
-                <Sparkles className="w-5 h-5" />
+            <div className="flex items-center gap-2.5 mb-1.5">
+              <span className="p-2 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                <RubElHizbIcon className="w-5 h-5" />
               </span>
-              <h2 className="text-xl font-bold text-white tracking-tight">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">
                 Asmaul Husna (99 Nama Allah)
               </h2>
             </div>
-            <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
+            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-2xl leading-relaxed">
               "Hanya milik Allah asmaul-husna, maka bermohonlah kepada-Nya dengan menyebut asmaul-husna itu..." (QS. Al-A'raf: 180)
             </p>
           </div>
@@ -110,13 +118,13 @@ const AsmaulHusna: React.FC<AsmaulHusnaProps> = ({ onNotify }) => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari nama, arti, atau nomor (1-99)..."
-              className="w-full pl-9 pr-4 py-2 bg-slate-900/70 border border-emerald-900/50 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500"
+              placeholder="Cari nama, arti, nomor (1-99)..."
+              className="w-full pl-9 pr-8 py-2 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.1] rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-brand-500"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -136,10 +144,10 @@ const AsmaulHusna: React.FC<AsmaulHusnaProps> = ({ onNotify }) => {
             <button
               key={tab.id}
               onClick={() => setSelectedRange(tab.id)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors border ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors border ${
                 selectedRange === tab.id
-                  ? 'bg-brand-500/20 border-brand-500 text-brand-300 font-semibold'
-                  : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-200'
+                  ? 'bg-brand-50 dark:bg-brand-500/20 border-brand-500 text-brand-700 dark:text-brand-300 font-semibold shadow-sm'
+                  : 'bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/[0.06] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]'
               }`}
             >
               {tab.label}
@@ -158,11 +166,11 @@ const AsmaulHusna: React.FC<AsmaulHusnaProps> = ({ onNotify }) => {
             <div
               key={item.number}
               onClick={() => setActiveModalItem(item)}
-              className="app-card p-4 hover:border-brand-500/50 cursor-pointer transition-all hover:-translate-y-0.5 shadow-sm group flex flex-col justify-between"
+              className="app-card p-4 hover:border-brand-500/50 cursor-pointer transition-all hover:-translate-y-0.5 group flex flex-col justify-between"
             >
               {/* Card Top: Number & Actions */}
               <div className="flex items-center justify-between mb-2">
-                <span className="w-7 h-7 rounded-lg bg-emerald-900/40 border border-emerald-700/40 text-emerald-300 text-xs font-bold font-mono flex items-center justify-center group-hover:bg-brand-500/20 group-hover:text-brand-300 transition-colors">
+                <span className="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-700/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold font-mono flex items-center justify-center group-hover:bg-brand-500/10 group-hover:text-brand-600 dark:group-hover:text-brand-300 transition-colors">
                   {item.number}
                 </span>
 
@@ -171,8 +179,8 @@ const AsmaulHusna: React.FC<AsmaulHusnaProps> = ({ onNotify }) => {
                     onClick={() => toggleBookmark(item.number)}
                     className={`p-1.5 rounded-lg text-xs transition-colors ${
                       isSaved
-                        ? 'text-amber-400'
-                        : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800'
+                        ? 'text-amber-500'
+                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
                     }`}
                     title={isSaved ? 'Hapus penanda' : 'Tandai nama'}
                   >
@@ -181,30 +189,30 @@ const AsmaulHusna: React.FC<AsmaulHusnaProps> = ({ onNotify }) => {
 
                   <button
                     onClick={() => handleCopy(item)}
-                    className="p-1.5 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800 text-xs transition-colors"
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs transition-colors"
                     title="Salin Nama & Arti"
                   >
-                    {isCopied ? <Check className="w-3.5 h-3.5 text-brand-400" /> : <Copy className="w-3.5 h-3.5" />}
+                    {isCopied ? <Check className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" /> : <Copy className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               </div>
 
               {/* Card Middle: Arabic Calligraphy */}
               <div className="py-2 text-center">
-                <div className="font-arabic text-2xl sm:text-3xl text-amber-300 group-hover:scale-105 transition-transform leading-relaxed">
+                <div className="font-arabic text-2xl sm:text-3xl text-amber-600 dark:text-amber-300 group-hover:scale-105 transition-transform leading-relaxed">
                   {item.arabic}
                 </div>
               </div>
 
               {/* Card Bottom: Latin & Translation */}
-              <div className="pt-2 border-t border-emerald-900/20 dark:border-emerald-900/30 text-center">
-                <h4 className="text-xs font-bold text-slate-100 group-hover:text-brand-300 transition-colors">
+              <div className="pt-2 border-t border-slate-200/80 dark:border-white/[0.08] text-center">
+                <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-brand-600 dark:group-hover:text-brand-300 transition-colors">
                   {item.latin}
                 </h4>
-                <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
                   {item.translation}
                 </p>
-                <div className="text-[10px] text-brand-400/80 mt-1.5 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="text-[10px] text-brand-600 dark:text-brand-400 mt-1.5 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <span>Makna & Dalil</span>
                   <ExternalLink className="w-2.5 h-2.5" />
                 </div>
@@ -220,17 +228,17 @@ const AsmaulHusna: React.FC<AsmaulHusnaProps> = ({ onNotify }) => {
         )}
       </div>
 
-      {/* Detail Modal / Drawer */}
+      {/* Detail Modal */}
       {activeModalItem && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-[#0f1d19] border border-emerald-700/50 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 relative">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#101c18] border border-slate-200 dark:border-white/[0.1] rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 relative">
             {/* Top Bar */}
-            <div className="flex items-center justify-between pb-3 border-b border-emerald-900/40">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-white/[0.08]">
               <div className="flex items-center gap-2">
-                <span className="w-7 h-7 rounded-lg bg-brand-500/20 text-brand-300 text-xs font-bold font-mono flex items-center justify-center">
+                <span className="w-7 h-7 rounded-lg bg-brand-50 dark:bg-brand-500/20 text-brand-700 dark:text-brand-300 text-xs font-bold font-mono flex items-center justify-center">
                   {activeModalItem.number}
                 </span>
-                <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">
+                <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider">
                   Asmaul Husna #{activeModalItem.number}
                 </span>
               </div>
@@ -240,8 +248,8 @@ const AsmaulHusna: React.FC<AsmaulHusnaProps> = ({ onNotify }) => {
                   onClick={() => toggleBookmark(activeModalItem.number)}
                   className={`p-1.5 rounded-lg text-xs transition-colors ${
                     bookmarks.includes(activeModalItem.number)
-                      ? 'text-amber-400 bg-amber-500/10'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'text-amber-500 bg-amber-50 dark:bg-amber-500/10'
+                      : 'text-slate-400 hover:text-slate-700 dark:hover:text-white'
                   }`}
                   title="Tandai nama ini"
                 >
@@ -254,11 +262,11 @@ const AsmaulHusna: React.FC<AsmaulHusnaProps> = ({ onNotify }) => {
 
                 <button
                   onClick={() => handleCopy(activeModalItem)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-white transition-colors"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
                   title="Salin"
                 >
                   {copiedNumber === activeModalItem.number ? (
-                    <Check className="w-4 h-4 text-brand-400" />
+                    <Check className="w-4 h-4 text-brand-600 dark:text-brand-400" />
                   ) : (
                     <Copy className="w-4 h-4" />
                   )}
@@ -266,7 +274,7 @@ const AsmaulHusna: React.FC<AsmaulHusnaProps> = ({ onNotify }) => {
 
                 <button
                   onClick={() => setActiveModalItem(null)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-white transition-colors ml-1"
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors ml-1"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -274,58 +282,58 @@ const AsmaulHusna: React.FC<AsmaulHusnaProps> = ({ onNotify }) => {
             </div>
 
             {/* Arabic Center Showcase */}
-            <div className="app-card-elevated p-6 text-center bg-gradient-to-b from-slate-900/80 to-slate-900/40 border-emerald-900/30">
-              <div className="font-arabic text-4xl sm:text-5xl text-amber-300 mb-2 leading-relaxed">
+            <div className="app-card-elevated p-6 text-center">
+              <div className="font-arabic text-4xl sm:text-5xl text-amber-600 dark:text-amber-300 mb-2 leading-relaxed">
                 {activeModalItem.arabic}
               </div>
-              <h3 className="text-lg font-bold text-white tracking-wide">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white tracking-wide">
                 {activeModalItem.latin}
               </h3>
-              <p className="text-xs font-semibold text-brand-300 mt-0.5">
+              <p className="text-xs font-semibold text-brand-600 dark:text-brand-300 mt-0.5">
                 "{activeModalItem.translation}"
               </p>
             </div>
 
             {/* Meaning Explanation */}
             <div>
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">
+              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1.5">
                 Makna & Penjelasan Mendalam:
               </span>
-              <p className="text-xs sm:text-sm text-slate-200 leading-relaxed bg-slate-900/50 p-3.5 rounded-xl border border-emerald-900/20">
+              <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed bg-slate-50 dark:bg-white/[0.02] p-3.5 rounded-xl border border-slate-200 dark:border-white/[0.06]">
                 {activeModalItem.meaning}
               </p>
             </div>
 
             {/* Dalil Ayat Al-Quran */}
             <div>
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
-                <BookOpen className="w-3.5 h-3.5 text-amber-400" />
+              <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1.5">
+                <BookOpen className="w-3.5 h-3.5 text-amber-500" />
                 Dalil Terkait:
               </span>
-              <div className="p-3 rounded-xl bg-slate-900/70 border border-emerald-900/20 text-xs text-amber-200/90 italic leading-relaxed">
+              <div className="p-3 rounded-xl bg-amber-50/70 dark:bg-amber-500/10 border border-amber-200/80 dark:border-amber-500/20 text-xs text-amber-900 dark:text-amber-200 italic leading-relaxed">
                 {activeModalItem.dalil}
               </div>
             </div>
 
             {/* Modal Bottom Prev / Next Nav */}
-            <div className="flex items-center justify-between pt-2 border-t border-emerald-900/30">
+            <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-white/[0.08]">
               <button
                 onClick={() => navigateModal('prev')}
                 disabled={activeModalItem.number <= 1}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900/60 hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed text-slate-300 border border-slate-800 transition-colors"
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" />
                 Sebelumnya
               </button>
 
-              <span className="text-[11px] text-slate-500 font-mono">
+              <span className="text-[11px] text-slate-400 dark:text-slate-500 font-mono">
                 {activeModalItem.number} / 99
               </span>
 
               <button
                 onClick={() => navigateModal('next')}
                 disabled={activeModalItem.number >= 99}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900/60 hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed text-slate-300 border border-slate-800 transition-colors"
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 transition-colors"
               >
                 Selanjutnya
                 <ChevronRight className="w-4 h-4" />

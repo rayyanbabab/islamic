@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { RotateCcw, Volume2, VolumeX, Sparkles, CheckCircle2 } from 'lucide-react';
+import { RotateCcw, Volume2, VolumeX, CheckCircle2 } from 'lucide-react';
+import { TasbihBeadsIcon } from './Icons';
 
 interface DzikirPreset {
   arabic: string;
@@ -142,23 +143,25 @@ const TasbihCounter: React.FC<TasbihCounterProps> = ({ onNotify }) => {
   const progressPercent = target > 0 ? Math.min(Math.round((count / target) * 100), 100) : 0;
 
   return (
-    <div className="app-card p-6 max-w-xl mx-auto">
+    <div className="app-card p-6 max-w-xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6 pb-4 border-b border-emerald-900/20 dark:border-emerald-900/40">
+      <div className="flex items-center justify-between pb-4 border-b border-slate-200/80 dark:border-white/[0.08]">
         <div>
-          <h2 className="text-xl font-bold flex items-center gap-2 text-slate-100">
-            <Sparkles className="w-5 h-5 text-amber-400" />
+          <h2 className="text-xl font-bold flex items-center gap-2.5 text-slate-900 dark:text-slate-100">
+            <span className="p-1.5 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400">
+              <TasbihBeadsIcon className="w-5 h-5" />
+            </span>
             Tasbih Digital
           </h2>
-          <p className="text-xs text-slate-400 mt-0.5">Penghitung Dzikir & Shalawat harian</p>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Penghitung Dzikir & Shalawat Harian</p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className={`p-2 rounded-lg border text-xs transition-colors ${
+            className={`p-2 rounded-xl border text-xs transition-colors ${
               soundEnabled
-                ? 'border-brand-500/40 text-brand-400 bg-brand-500/10'
-                : 'border-slate-700 text-slate-400 hover:text-slate-200'
+                ? 'border-brand-500/40 text-brand-600 dark:text-brand-400 bg-brand-500/10'
+                : 'border-slate-200 dark:border-white/[0.08] text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
             }`}
             title={soundEnabled ? 'Suara Aktif' : 'Suara Senyap'}
           >
@@ -166,7 +169,7 @@ const TasbihCounter: React.FC<TasbihCounterProps> = ({ onNotify }) => {
           </button>
           <button
             onClick={handleReset}
-            className="p-2 rounded-lg border border-slate-700 text-slate-400 hover:text-rose-400 hover:border-rose-500/30 transition-colors"
+            className="p-2 rounded-xl border border-slate-200 dark:border-white/[0.08] text-slate-400 hover:text-rose-500 hover:border-rose-500/30 transition-colors"
             title="Reset Hitungan"
           >
             <RotateCcw className="w-4 h-4" />
@@ -175,8 +178,8 @@ const TasbihCounter: React.FC<TasbihCounterProps> = ({ onNotify }) => {
       </div>
 
       {/* Preset Selector */}
-      <div className="mb-6">
-        <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">
+      <div>
+        <label className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-2">
           Pilihan Bacaan Dzikir
         </label>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -184,44 +187,44 @@ const TasbihCounter: React.FC<TasbihCounterProps> = ({ onNotify }) => {
             <button
               key={preset.transliteration}
               onClick={() => handleSelectPreset(idx)}
-              className={`p-2.5 rounded-lg text-left border transition-all text-xs font-medium ${
+              className={`p-2.5 rounded-xl text-left border transition-all text-xs font-medium ${
                 selectedPresetIndex === idx
-                  ? 'border-brand-500 bg-brand-500/15 text-brand-300 font-semibold'
-                  : 'border-slate-800 bg-slate-900/40 text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'
+                  ? 'border-brand-500 bg-brand-50 dark:bg-brand-500/15 text-brand-700 dark:text-brand-300 font-semibold shadow-sm'
+                  : 'border-slate-200 dark:border-white/[0.08] bg-slate-50/70 dark:bg-white/[0.02] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05] hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
-              <div className="truncate">{preset.transliteration}</div>
-              <div className="text-[10px] text-slate-500 truncate">{preset.meaning}</div>
+              <div className="truncate font-semibold">{preset.transliteration}</div>
+              <div className="text-[10px] text-slate-400 dark:text-slate-500 truncate mt-0.5">{preset.meaning}</div>
             </button>
           ))}
         </div>
       </div>
 
       {/* Active Dzikir Display */}
-      <div className="app-card-elevated p-5 text-center mb-6">
-        <div className="font-arabic text-2xl sm:text-3xl text-amber-300 mb-2 leading-relaxed">
+      <div className="app-card-elevated p-5 text-center">
+        <div className="font-arabic text-2xl sm:text-3xl text-amber-600 dark:text-amber-300 mb-2 leading-relaxed">
           {currentPreset.arabic}
         </div>
-        <div className="font-semibold text-slate-200 text-sm mb-1">
+        <div className="font-bold text-slate-900 dark:text-slate-100 text-sm mb-1">
           {currentPreset.transliteration}
         </div>
-        <div className="text-xs text-slate-400">
+        <div className="text-xs text-slate-500 dark:text-slate-400">
           "{currentPreset.meaning}"
         </div>
       </div>
 
       {/* Target Selector */}
-      <div className="flex items-center justify-between mb-6 px-1">
-        <span className="text-xs text-slate-400 font-medium">Target Putaran:</span>
+      <div className="flex items-center justify-between px-1">
+        <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Target Putaran:</span>
         <div className="flex gap-1.5">
           {[33, 99, 100, 0].map((t) => (
             <button
               key={t}
               onClick={() => setTarget(t)}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
+              className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
                 target === t
-                  ? 'border-amber-500/50 bg-amber-500/15 text-amber-300'
-                  : 'border-slate-800 text-slate-400 hover:text-slate-200'
+                  ? 'border-amber-500 bg-amber-50 dark:bg-amber-500/15 text-amber-700 dark:text-amber-300 font-semibold'
+                  : 'border-slate-200 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.04]'
               }`}
             >
               {t === 0 ? 'Bebas' : `${t}x`}
@@ -231,7 +234,7 @@ const TasbihCounter: React.FC<TasbihCounterProps> = ({ onNotify }) => {
       </div>
 
       {/* Main Interactive Button with Progress Circle */}
-      <div className="flex flex-col items-center justify-center my-4">
+      <div className="flex flex-col items-center justify-center my-6">
         <div className="relative flex items-center justify-center">
           {/* Circular progress SVG */}
           <svg className="w-56 h-56 transform -rotate-90">
@@ -239,7 +242,7 @@ const TasbihCounter: React.FC<TasbihCounterProps> = ({ onNotify }) => {
               cx="112"
               cy="112"
               r="100"
-              className="stroke-slate-800"
+              className="stroke-slate-200 dark:stroke-white/[0.07]"
               strokeWidth="6"
               fill="transparent"
             />
@@ -258,21 +261,21 @@ const TasbihCounter: React.FC<TasbihCounterProps> = ({ onNotify }) => {
             )}
           </svg>
 
-          {/* Big Tap Button */}
+          {/* Big Tactile Tap Button */}
           <button
             onClick={handleIncrement}
-            className="absolute w-44 h-44 rounded-full bg-gradient-to-b from-brand-600 to-brand-800 hover:from-brand-500 hover:to-brand-700 active:scale-95 shadow-xl shadow-brand-950/50 flex flex-col items-center justify-center text-white transition-transform cursor-pointer border border-brand-400/30"
+            className="absolute w-44 h-44 rounded-full bg-brand-600 hover:bg-brand-500 dark:bg-brand-600 dark:hover:bg-brand-500 active:scale-95 shadow-lg shadow-brand-600/20 flex flex-col items-center justify-center text-white transition-all cursor-pointer border-4 border-white/20 select-none"
           >
             <span className="text-4xl font-extrabold tracking-tight font-mono">{count}</span>
-            <span className="text-xs text-brand-200 mt-1 uppercase tracking-widest font-semibold">
+            <span className="text-xs text-brand-100 mt-1 uppercase tracking-widest font-semibold">
               {target > 0 ? `/ ${target}` : 'Dzikir'}
             </span>
-            <span className="text-[10px] text-brand-300/70 mt-2">Ketuk Layar</span>
+            <span className="text-[10px] text-white/70 mt-2 font-medium">Ketuk Layar</span>
           </button>
         </div>
 
         {target > 0 && count >= target && (
-          <div className="flex items-center gap-1.5 text-xs text-brand-400 mt-4 font-medium animate-pulse">
+          <div className="flex items-center gap-1.5 text-xs text-brand-600 dark:text-brand-400 mt-4 font-semibold animate-pulse">
             <CheckCircle2 className="w-4 h-4" />
             Target {target}x telah selesai!
           </div>
@@ -280,14 +283,14 @@ const TasbihCounter: React.FC<TasbihCounterProps> = ({ onNotify }) => {
       </div>
 
       {/* Footer Stats */}
-      <div className="grid grid-cols-2 gap-3 pt-4 border-t border-emerald-900/20 dark:border-emerald-900/40 text-center">
-        <div className="p-2.5 rounded-lg bg-slate-900/40 border border-slate-800/60">
-          <div className="text-[11px] text-slate-400">Total Dzikir Hari Ini</div>
-          <div className="text-base font-bold text-slate-100 font-mono mt-0.5">{totalToday}</div>
+      <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-200/80 dark:border-white/[0.08] text-center">
+        <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.06]">
+          <div className="text-[11px] text-slate-500 dark:text-slate-400">Total Dzikir Hari Ini</div>
+          <div className="text-lg font-bold text-slate-900 dark:text-slate-100 font-mono mt-0.5">{totalToday}</div>
         </div>
-        <div className="p-2.5 rounded-lg bg-slate-900/40 border border-slate-800/60">
-          <div className="text-[11px] text-slate-400">Kemajuan Putaran</div>
-          <div className="text-base font-bold text-brand-400 font-mono mt-0.5">
+        <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.06]">
+          <div className="text-[11px] text-slate-500 dark:text-slate-400">Kemajuan Putaran</div>
+          <div className="text-lg font-bold text-brand-600 dark:text-brand-400 font-mono mt-0.5">
             {target > 0 ? `${progressPercent}%` : '-'}
           </div>
         </div>

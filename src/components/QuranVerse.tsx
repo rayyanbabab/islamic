@@ -74,17 +74,17 @@ const QuranVerse: React.FC<QuranVerseProps> = ({ onNavigateToSurah, onNotify }) 
   };
 
   return (
-    <div className="app-card p-6 h-full flex flex-col justify-between shadow-soft">
+    <div className="app-card p-6 h-full flex flex-col justify-between">
       {/* Top Header */}
       <div>
-        <div className="flex items-center justify-between mb-4 pb-3 border-b border-emerald-900/20 dark:border-emerald-900/30">
-          <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-lg bg-brand-500/10 text-brand-400">
+        <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-200/80 dark:border-white/[0.08]">
+          <div className="flex items-center gap-2.5">
+            <span className="p-1.5 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400">
               <BookOpen className="w-4 h-4" />
             </span>
             <div>
-              <h3 className="text-sm font-bold text-slate-100">Ayat Hari Ini</h3>
-              <p className="text-[11px] text-slate-400">Renungan & Hikmah Al-Quran</p>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">Ayat Hari Ini</h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">Renungan & Hikmah Al-Quran</p>
             </div>
           </div>
 
@@ -92,10 +92,10 @@ const QuranVerse: React.FC<QuranVerseProps> = ({ onNavigateToSurah, onNotify }) 
             <button
               onClick={fetchVerse}
               disabled={loading}
-              className="p-2 rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition-colors"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
               title="Ambil ayat lain"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-brand-400' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-brand-500' : ''}`} />
             </button>
           </div>
         </div>
@@ -104,14 +104,14 @@ const QuranVerse: React.FC<QuranVerseProps> = ({ onNavigateToSurah, onNotify }) 
           <div className="space-y-4">
             {/* Surah & Ayah Badge */}
             <div className="flex items-center justify-between">
-              <span className="badge-brand text-xs font-semibold px-2.5 py-1 rounded-full">
+              <span className="badge-brand text-xs font-semibold px-2.5 py-0.5 rounded-full">
                 QS. {verse.surahName} : Ayat {verse.ayah}
               </span>
 
               {onNavigateToSurah && (
                 <button
                   onClick={() => onNavigateToSurah(parseInt(verse.surah, 10))}
-                  className="text-[11px] text-brand-400 hover:text-brand-300 font-medium inline-flex items-center gap-1 transition-colors"
+                  className="text-[11px] text-brand-600 dark:text-brand-400 hover:text-brand-700 dark:hover:text-brand-300 font-semibold inline-flex items-center gap-1 transition-colors"
                 >
                   Baca Surah
                   <ExternalLink className="w-3 h-3" />
@@ -121,13 +121,13 @@ const QuranVerse: React.FC<QuranVerseProps> = ({ onNavigateToSurah, onNotify }) 
 
             {/* Arabic Verse Container */}
             <div className="app-card-elevated p-4 sm:p-5">
-              <p className="font-arabic text-xl sm:text-2xl text-slate-100 leading-loose">
+              <p className="font-arabic text-xl sm:text-2xl text-slate-900 dark:text-slate-100 leading-loose">
                 {verse.text}
               </p>
             </div>
 
             {/* Indonesian Translation */}
-            <div className="text-xs sm:text-sm text-slate-300 leading-relaxed italic border-l-2 border-brand-500/50 pl-3 py-1">
+            <div className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed italic border-l-2 border-brand-500/50 pl-3 py-1">
               "{verse.translation}"
             </div>
           </div>
@@ -140,25 +140,25 @@ const QuranVerse: React.FC<QuranVerseProps> = ({ onNavigateToSurah, onNotify }) 
 
       {/* Action Footer */}
       {verse && (
-        <div className="pt-4 mt-4 border-t border-emerald-900/20 dark:border-emerald-900/30 flex items-center justify-between">
+        <div className="pt-4 mt-4 border-t border-slate-200/80 dark:border-white/[0.08] flex items-center justify-between">
           <button
             onClick={handleToggleAudio}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
               isPlaying
                 ? 'bg-amber-500 text-slate-950 border-amber-400 font-semibold'
-                : 'bg-slate-900/50 hover:bg-slate-800 text-slate-300 border-slate-800'
+                : 'bg-slate-50 dark:bg-white/[0.02] hover:bg-slate-100 dark:hover:bg-white/[0.05] text-slate-700 dark:text-slate-300 border-slate-200 dark:border-white/[0.08]'
             }`}
           >
-            {isPlaying ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5 text-amber-400" />}
+            {isPlaying ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5 text-amber-500" />}
             <span>{isPlaying ? 'Hentikan' : 'Dengarkan Murottal'}</span>
           </button>
 
           <button
             onClick={handleCopy}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 hover:bg-slate-800/60 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60 transition-colors"
             title="Salin Ayat & Terjemahan"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-brand-400" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? <Check className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" /> : <Copy className="w-3.5 h-3.5" />}
             <span>{copied ? 'Tersalin' : 'Salin'}</span>
           </button>
         </div>

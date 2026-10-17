@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Compass, Navigation, ExternalLink, Info, Search } from 'lucide-react';
 import { getQiblaDirection, INDONESIAN_CITIES } from '../services/islamicApi';
+import { KaabaIcon } from './Icons';
 
 interface QiblaFinderProps {
   onNotify?: (msg: string) => void;
@@ -64,39 +65,48 @@ const QiblaFinder: React.FC<QiblaFinderProps> = ({ onNotify }) => {
         setMapUrl(result.url);
         setCityName('Lokasi Anda (GPS)');
         setLoading(false);
-        if (onNotify) onNotify('Arah kiblat disesuaikan dengan GPS');
+        if (onNotify) onNotify('Arah kiblat berhasil dihitung dari GPS');
       },
       () => {
-        setError('Gagal mengakses GPS. Pastikan izin lokasi aktif.');
+        setError('Akses GPS ditolak. Menggunakan kota default.');
         setLoading(false);
       }
     );
   };
 
-  // Device orientation / compass sensor
+  // Device orientation compass sensor
   const toggleDeviceCompass = () => {
-    const DeviceOrientation = window.DeviceOrientationEvent as unknown as {
-      requestPermission?: () => Promise<string>;
-    };
+    if (isSensorActive) {
+      window.removeEventListener('deviceorientation', () => {});
+      setIsSensorActive(false);
+      setDeviceHeading(null);
+      return;
+    }
 
-    if (typeof DeviceOrientation?.requestPermission === 'function') {
-      // iOS 13+ permission
-      DeviceOrientation.requestPermission()
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof (DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> }).requestPermission === 'function') {
+      // iOS 13+ permission request
+      (DeviceOrientationEvent as unknown as { requestPermission: () => Promise<string> })
+        .requestPermission()
         .then((response: string) => {
           if (response === 'granted') {
-            startCompassListener();
+            listenToOrientation();
           } else {
-            setError('Izin sensor kompas ditolak');
+            setError('Izin sensor orientasi ditolak.');
           }
         })
-        .catch(() => setError('Gagal mengaktifkan sensor kompas'));
+        .catch(() => {
+          setError('Gagal meminta izin sensor.');
+        });
+    } else if ('ondeviceorientationabsolute' in window) {
+      listenToOrientation();
+    } else if ('ondeviceorientation' in window) {
+      listenToOrientation();
     } else {
-      // Android or standard browsers
-      startCompassListener();
+      setError('Sensor kompas tidak didukung di browser ini.');
     }
   };
 
-  const startCompassListener = () => {
+  const listenToOrientation = () => {
     const handleOrientation = (e: DeviceOrientationEvent) => {
       let heading = null;
       const webkitHeading = (e as unknown as { webkitCompassHeading?: number }).webkitCompassHeading;
@@ -125,23 +135,23 @@ const QiblaFinder: React.FC<QiblaFinderProps> = ({ onNotify }) => {
   const popularCities = ['Jakarta', 'Surabaya', 'Bandung', 'Medan', 'Makassar', 'Yogyakarta'];
 
   return (
-    <div className="app-card p-6 shadow-soft max-w-xl mx-auto space-y-6">
+    <div className="app-card p-6 max-w-xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-emerald-900/20 dark:border-emerald-900/30">
-        <div className="flex items-center gap-2">
-          <span className="p-1.5 rounded-lg bg-amber-500/10 text-amber-400">
+      <div className="flex items-center justify-between pb-4 border-b border-slate-200/80 dark:border-white/[0.08]">
+        <div className="flex items-center gap-2.5">
+          <span className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
             <Compass className="w-5 h-5" />
           </span>
           <div>
-            <h3 className="text-base font-bold text-slate-100">Penunjuk Arah Kiblat</h3>
-            <p className="text-xs text-slate-400">Arah presisi menuju Ka'bah di Makkah Al-Mukarramah</p>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">Penunjuk Arah Kiblat</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400">Arah presisi menuju Ka'bah di Makkah Al-Mukarramah</p>
           </div>
         </div>
 
         <button
           onClick={handleGetCurrentLocation}
           disabled={loading}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 text-xs font-medium border border-emerald-700/50 transition-colors"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-emerald-950/60 hover:bg-slate-200 dark:hover:bg-emerald-900/60 text-slate-700 dark:text-emerald-200 text-xs font-semibold border border-slate-200 dark:border-emerald-700/50 transition-colors"
           title="Deteksi Lokasi GPS"
         >
           <Navigation className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
@@ -159,7 +169,7 @@ const QiblaFinder: React.FC<QiblaFinderProps> = ({ onNotify }) => {
             onChange={(e) => setSearchInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             placeholder="Cari kota untuk arah kiblat..."
-            className="w-full pl-9 pr-20 py-2 bg-slate-900/60 dark:bg-[#0c1815] border border-emerald-900/40 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-brand-500"
+            className="w-full pl-9 pr-20 py-2.5 bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/[0.1] rounded-xl text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-brand-500"
           />
           <button
             onClick={handleSearch}
@@ -169,9 +179,9 @@ const QiblaFinder: React.FC<QiblaFinderProps> = ({ onNotify }) => {
           </button>
         </div>
 
-        <div className="flex items-center justify-between pt-1">
-          <span className="text-[11px] font-semibold text-slate-400">Lokasi:</span>
-          <span className="text-xs font-bold text-brand-300 capitalize">{cityName}</span>
+        <div className="flex items-center justify-between pt-1 text-xs">
+          <span className="font-semibold text-slate-500 dark:text-slate-400">Lokasi Terpilih:</span>
+          <span className="font-bold text-brand-600 dark:text-brand-300 capitalize">{cityName}</span>
         </div>
 
         <div className="flex flex-wrap gap-1.5">
@@ -182,10 +192,10 @@ const QiblaFinder: React.FC<QiblaFinderProps> = ({ onNotify }) => {
                 setCityName(c);
                 setError('');
               }}
-              className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
+              className={`px-3 py-1 rounded-lg text-xs font-medium border transition-colors ${
                 cityName.toLowerCase() === c.toLowerCase()
-                  ? 'bg-brand-500/20 border-brand-500 text-brand-300 font-semibold'
-                  : 'bg-slate-900/40 border-slate-800 text-slate-400 hover:text-slate-200'
+                  ? 'bg-brand-50 dark:bg-brand-500/20 border-brand-500 text-brand-700 dark:text-brand-300 font-semibold shadow-sm'
+                  : 'bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/[0.06] text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/[0.05]'
               }`}
             >
               {c}
@@ -196,18 +206,18 @@ const QiblaFinder: React.FC<QiblaFinderProps> = ({ onNotify }) => {
 
       {/* Visual Compass Dial */}
       <div className="flex flex-col items-center justify-center my-6">
-        <div className="relative w-64 h-64 flex items-center justify-center">
+        <div className="relative w-64 h-64 flex items-center justify-center select-none">
           {/* Compass Outer Ring */}
-          <div className="absolute inset-0 rounded-full border-2 border-emerald-800/40 bg-gradient-to-b from-slate-900/80 to-[#0b1b16] shadow-2xl flex items-center justify-center">
+          <div className="absolute inset-0 rounded-full border border-slate-200 dark:border-white/[0.1] bg-slate-50 dark:bg-[#0c1815] shadow-lg flex items-center justify-center">
             {/* Cardinal Marks */}
-            <span className="absolute top-2 text-xs font-bold text-amber-400 tracking-wider">U (0°)</span>
+            <span className="absolute top-2 text-xs font-bold text-amber-600 dark:text-amber-400 tracking-wider">U (0°)</span>
             <span className="absolute right-3 text-xs font-bold text-slate-400">T (90°)</span>
             <span className="absolute bottom-2 text-xs font-bold text-slate-400">S (180°)</span>
             <span className="absolute left-3 text-xs font-bold text-slate-400">B (270°)</span>
 
-            {/* Subtle Degree Ticks */}
-            <div className="w-48 h-48 rounded-full border border-dashed border-emerald-900/50 flex items-center justify-center">
-              <div className="w-32 h-32 rounded-full border border-emerald-800/20" />
+            {/* Degree Ticks */}
+            <div className="w-48 h-48 rounded-full border border-dashed border-slate-300 dark:border-white/[0.08] flex items-center justify-center">
+              <div className="w-32 h-32 rounded-full border border-slate-200 dark:border-white/[0.05]" />
             </div>
           </div>
 
@@ -217,33 +227,33 @@ const QiblaFinder: React.FC<QiblaFinderProps> = ({ onNotify }) => {
             style={{ transform: `rotate(${needleAngle}deg)` }}
           >
             {/* Kaaba indicator on top */}
-            <div className="absolute top-6 flex flex-col items-center">
-              <div className="px-2 py-0.5 rounded bg-amber-500 text-slate-950 text-[10px] font-extrabold shadow-md mb-1 uppercase tracking-wider">
-                Ka'bah
+            <div className="absolute top-4 flex flex-col items-center">
+              <div className="p-1 rounded-md bg-amber-500 text-slate-950 shadow-md mb-1 flex items-center justify-center">
+                <KaabaIcon className="w-4 h-4 text-slate-950" />
               </div>
-              <div className="w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[18px] border-b-amber-400" />
+              <div className="w-0 h-0 border-l-[7px] border-l-transparent border-r-[7px] border-r-transparent border-b-[14px] border-b-amber-500" />
             </div>
 
             {/* Needle Line */}
-            <div className="w-1.5 h-44 bg-gradient-to-t from-slate-600 via-emerald-400 to-amber-400 rounded-full shadow-lg" />
+            <div className="w-1.5 h-44 bg-gradient-to-t from-slate-400 via-brand-500 to-amber-500 rounded-full shadow-sm" />
 
             {/* Bottom Tail */}
-            <div className="absolute bottom-7 w-2.5 h-2.5 rounded-full bg-slate-600" />
+            <div className="absolute bottom-7 w-2.5 h-2.5 rounded-full bg-slate-400 dark:bg-slate-600" />
           </div>
 
           {/* Center Pivot */}
-          <div className="relative z-10 w-8 h-8 rounded-full bg-slate-900 border-2 border-amber-400 flex items-center justify-center shadow-lg">
-            <div className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+          <div className="relative z-10 w-7 h-7 rounded-full bg-white dark:bg-slate-900 border-2 border-amber-500 flex items-center justify-center shadow-md">
+            <div className="w-2 h-2 rounded-full bg-amber-500" />
           </div>
         </div>
 
         {/* Readout stats */}
         <div className="mt-4 text-center">
-          <div className="text-3xl font-extrabold text-white font-mono tracking-tight">
-            {Math.round(bearing)}° <span className="text-base font-semibold text-amber-300">Barat Laut</span>
+          <div className="text-3xl font-extrabold text-slate-900 dark:text-white font-mono tracking-tight">
+            {Math.round(bearing)}° <span className="text-base font-semibold text-amber-600 dark:text-amber-300">Barat Laut</span>
           </div>
-          <p className="text-xs text-slate-400 mt-1">
-            Jarak ke Ka'bah: <strong className="text-slate-200">{distanceKm.toLocaleString('id-ID')} km</strong>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            Jarak ke Ka'bah: <strong className="text-slate-800 dark:text-slate-200">{distanceKm.toLocaleString('id-ID')} km</strong>
           </p>
         </div>
       </div>
@@ -254,11 +264,11 @@ const QiblaFinder: React.FC<QiblaFinderProps> = ({ onNotify }) => {
           onClick={toggleDeviceCompass}
           className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-semibold border flex items-center justify-center gap-2 transition-colors ${
             isSensorActive
-              ? 'bg-brand-500/20 border-brand-500 text-brand-300'
-              : 'bg-slate-900/60 hover:bg-slate-800 text-slate-300 border-slate-800'
+              ? 'bg-brand-50 dark:bg-brand-500/20 border-brand-500 text-brand-700 dark:text-brand-300 shadow-sm'
+              : 'bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/[0.08] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/[0.05]'
           }`}
         >
-          <Compass className="w-4 h-4 text-amber-400" />
+          <Compass className="w-4 h-4 text-amber-500" />
           <span>{isSensorActive ? 'Sensor Kompas Aktif' : 'Aktifkan Kompas HP'}</span>
         </button>
 
@@ -267,7 +277,7 @@ const QiblaFinder: React.FC<QiblaFinderProps> = ({ onNotify }) => {
             href={mapUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex-1 py-2.5 px-4 rounded-xl text-xs font-semibold bg-emerald-800 hover:bg-emerald-700 text-white flex items-center justify-center gap-2 transition-colors shadow-md"
+            className="flex-1 py-2.5 px-4 rounded-xl text-xs font-semibold bg-emerald-700 hover:bg-emerald-600 text-white flex items-center justify-center gap-2 transition-colors shadow-sm"
           >
             <ExternalLink className="w-4 h-4" />
             <span>Lihat Rute di Maps</span>
@@ -276,15 +286,15 @@ const QiblaFinder: React.FC<QiblaFinderProps> = ({ onNotify }) => {
       </div>
 
       {/* Guidance Note */}
-      <div className="p-3.5 rounded-xl bg-slate-900/40 border border-emerald-900/30 text-[11px] text-slate-400 flex items-start gap-2.5">
-        <Info className="w-4 h-4 text-amber-400/80 shrink-0 mt-0.5" />
+      <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200 dark:border-white/[0.06] text-[11px] text-slate-500 dark:text-slate-400 flex items-start gap-2.5">
+        <Info className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
         <p className="leading-relaxed">
           Posisikan perangkat Anda secara horizontal di permukaan datar, jauhkan dari benda logam atau medan magnet untuk akurasi optimal.
         </p>
       </div>
 
       {error && (
-        <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs">
+        <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-300 text-xs">
           {error}
         </div>
       )}
